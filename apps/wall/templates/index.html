@@ -2,31 +2,8 @@
 {% block title %}Home - {% endblock %}
 {% block content %}
 
-  {% for writing in writings %}
-    <h3><a href="/writings/{{ writing.author.name }}">{{ writing.author.name }}</a></h3>
-    {{ writing.body }}
-    <h5>{{ writing.date.strftime("%H:%M   %b %d %Y") }}</h5>
-    <form action="/" method="post">
-      <input name="writing_to_delete_key" value="{{ writing.key.id() }}" type="hidden">
-      <input type="submit" value="X" class="btn btn-default">
-      <!-- <button type="submit" class="btn btn-primary">
-        <span class="glyphicon glyphicon-delete" aria-hidden="true"></span>
-      </button> -->
-    </form>
-  {% endfor %}
+  {% include "writings.html" %}
 
-  {% if current_page|int > 1 %}
-    <a href="/?page_number={{ current_page|int - 1 }}">Previous</a>
-  {% endif %}
-
-  {% if current_page|int < page_quantity %}
-    <a href="/?page_number={{ current_page|int + 1 }}">Next</a>
-  {% endif %}
-
-  <form method="post" action="" class="form-horizontal">
-      <input type="text" name="author_name" value="" class="form-control">
-      <textarea name="writing_body" rows="3" cols="16" class="form-control"></textarea>
-      <input type="submit" value="Create Writing" class="btn btn-primary">
-  </form>
+  {% include "new_writing.html" %}
 
 {% endblock %}

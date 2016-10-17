@@ -1,0 +1,14 @@
+<nav aria-label="...">
+  <ul class="pager">
+
+    {% if current_page|int > 1 %}
+      <li><a href="/?page_number={{ current_page|int - 1 }}{{ url_postfix }}">Previous</a></li>
+    {% endif %}
+
+
+    {% if current_page|int < page_quantity %}
+      <li><a href="/?page_number={{ current_page|int + 1 }}{{ url_postfix }}">Next</a></li>
+    {% endif %}
+
+  </ul>
+</nav>
