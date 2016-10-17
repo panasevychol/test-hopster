@@ -57,7 +57,8 @@ class WritingsHandler(webapp2.RequestHandler):
             offset=int(page_number)*WRITINGS_PER_PAGE-WRITINGS_PER_PAGE)
 
         template_values = {
-            'writings': writings
+            'writings': writings,
+            'author_name': author_name
         }
         template = JINJA_ENVIRONMENT.get_template('author_writings.html')
         self.response.write(template.render(template_values))

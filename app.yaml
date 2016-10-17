@@ -7,6 +7,9 @@ handlers:
   static_files: favicon.ico
   upload: favicon\.ico
 
+- url: /wall/static
+  static_dir: apps/wall/static
+
 - url: .*
   script: main.app
 
