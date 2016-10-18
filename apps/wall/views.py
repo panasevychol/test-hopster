@@ -4,6 +4,8 @@ import webapp2
 import jinja2
 
 from google.appengine.api import users
+from google.appengine.ext import ndb
+from webapp2_extras import sessions
 
 from models import Writing, Author
 from constants import WRITINGS_PER_PAGE
@@ -18,10 +20,33 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 
 class MainHandler(webapp2.RequestHandler):
 
+    def dispatch(self):
+        # Get a session store for this request.
+        self.session_store = sessions.get_store(request=self.request)
+
+        try:
+            # Dispatch the request.
+            webapp2.RequestHandler.dispatch(self)
+        finally:
+            # Save all sessions.
+            self.session_store.save_sessions(self.response)
+
+    @webapp2.cached_property
+    def session(self):
+        # Returns a session using the default cookie key.
+        return self.session_store.get_session()
+
     def get(self):
-        author_name_to_filter = self.request.get('author_name_to_filter')
-        if author_name_to_filter:
-            writing_query = Writing.query(Writing.author.name==author_name_to_filter)
+        add_author_filter, remove_author_filter = (self.request.get('add_author_filter'),
+                                                   self.request.get('remove_author_filter'))
+        if add_author_filter:
+            self.session['filter_author_name'] = add_author_filter
+        elif remove_author_filter:
+            self.session['filter_author_name'] = None
+
+        filter_author_name = self.session.get('filter_author_name')
+        if filter_author_name:
+            writing_query = Writing.query(Writing.author.name==filter_author_name)
         else:
             writing_query = Writing.query()
 
@@ -39,9 +64,8 @@ class MainHandler(webapp2.RequestHandler):
             'page_quantity': get_page_quantity(writing_query.count()),
             'current_page': page_number
         }
-
-        if author_name_to_filter:
-            template_values['author_name_to_filter'] = author_name_to_filter
+        if filter_author_name:
+            template_values['filter_author_name'] = filter_author_name
         template = JINJA_ENVIRONMENT.get_template('index.html')
         self.response.write(template.render(template_values))
 
@@ -58,20 +82,8 @@ class MainHandler(webapp2.RequestHandler):
 
         self.redirect('/')
 
-
-class WritingsHandler(webapp2.RequestHandler):
-    def get(self, author_name):
-        page_number = self.request.get('page_number', 1)
-        writing_query = Writing.query(Writing.author.name==author_name)
-        writings = writing_query.order(-Writing.date).fetch(
-            limit=WRITINGS_PER_PAGE,
-            offset=int(page_number)*WRITINGS_PER_PAGE-WRITINGS_PER_PAGE)
-
-        template_values = {
-            'writings': writings,
-            'author_name': author_name,
-            'current_page': page_number,
-            'page_quantity': get_page_quantity(writing_query.count())
-        }
-        template = JINJA_ENVIRONMENT.get_template('author_writings.html')
-        self.response.write(template.render(template_values))
+    def delete(self):
+        ndb.Key(urlsafe=self.request.get('writing_key')).delete()
+        # Writing.query(Writing.key==ndb.Key(
+        #     urlsafe=self.request.get('writing_key'))).get().key.delete()
+        # self.redirect('/')

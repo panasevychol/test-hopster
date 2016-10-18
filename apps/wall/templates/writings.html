@@ -1,32 +1,32 @@
-{% if author_name_to_filter %}
+{% if filter_author_name %}
   <p>
     Writings by:
   </p>
 
-  <a href="/" type="button" class="btn btn-warning btn-round-sm btn-sm ">{{ author_name_to_filter }} X</a>
+    <a href="/?remove_author_filter={{ filter_author_name }}" type="button"
+     class="btn btn-warning btn-round-sm btn-sm ">{{ filter_author_name }} X</a>
 
-  {% set url_postfix = "&author_name_to_filter=" + author_name_to_filter %}
-{% else %}
-  {% set url_postfix = "" %}
+{% elif writings %}
   <p>
     Click on author name to display only writings by that person
   </p>
+{% else %}
+  <h3>Write something to be the first!</h3>
 {% endif %}
 
 {% for writing in writings %}
   <hr>
-  <h4><a href="/?page_number=1&author_name_to_filter={{ writing.author.name }}">{{ writing.author.name }}</a> writes:</h4>
+  <h4 class="list-inline"><a href="/?add_author_filter={{ writing.author.name }}">{{ writing.author.name }}</a> writes:</h4>
   <i>{{ writing.body }}</i>
+  <script type="text/javascript" src="/wall/static/js/deleteWriting.js">
+
+  </script>
+  <span class="glyphicon glyphicon-remove pull-right text-danger delete_writing_button" aria-hidden="true">
+    <input type="hidden" value="{{ writing.key.urlsafe() }}">
+  </span>
   <h5 class="text-muted">{{ writing.date.strftime("%H:%M   %b %d %Y") }}</h5>
 
-  <form action="/" method="post">
-    <input name="writing_to_delete_key" value="{{ writing.key.id() }}" type="hidden">
-    <!-- <input type="submit" value="X" class="btn btn-default"> -->
-    <!-- <button type="submit" class="btn btn-primary">
-      <span class="glyphicon glyphicon-delete" aria-hidden="true"></span>
-    </button> -->
-  </form>
-
 {% endfor %}
+
 
 {% include "page_navigation.html" %}
