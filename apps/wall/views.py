@@ -37,6 +37,11 @@ class MainHandler(webapp2.RequestHandler):
         return self.session_store.get_session()
 
     def get(self):
+        user = users.get_current_user()
+        if not user:
+            self.redirect(users.create_login_url())
+            return
+
         add_author_filter, remove_author_filter = (self.request.get('add_author_filter'),
                                                    self.request.get('remove_author_filter'))
         if add_author_filter:
@@ -62,7 +67,9 @@ class MainHandler(webapp2.RequestHandler):
         template_values = {
             'writings': writings,
             'page_quantity': get_page_quantity(writing_query.count()),
-            'current_page': page_number
+            'current_page': page_number,
+            'logout_url': users.create_logout_url('/'),
+            'nickname': user.nickname()
         }
         if filter_author_name:
             template_values['filter_author_name'] = filter_author_name
@@ -70,20 +77,24 @@ class MainHandler(webapp2.RequestHandler):
         self.response.write(template.render(template_values))
 
     def post(self):
+        user = users.get_current_user()
+        if not user:
+            self.redirect(users.create_login_url())
+            return
+
         writing_body, author_name = self.request.get('writing_body'), self.request.get('author_name')
+        print writing_body, author_name
         if writing_body and author_name:
             new_writing = Writing(body=writing_body,
                                   author=Author(name=author_name))
             new_writing.put()
 
-        writing_to_delete_key = self.request.get('writing_to_delete_key')
-        if writing_to_delete_key:
-            raise NotImplementedError
-
         self.redirect('/')
 
     def delete(self):
+        user = users.get_current_user()
+        if not user:
+            self.redirect(users.create_login_url())
+            return
+
         ndb.Key(urlsafe=self.request.get('writing_key')).delete()
-        # Writing.query(Writing.key==ndb.Key(
-        #     urlsafe=self.request.get('writing_key'))).get().key.delete()
-        # self.redirect('/')
