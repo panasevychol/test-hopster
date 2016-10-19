@@ -18,15 +18,14 @@
   <hr>
   <h4 class="list-inline"><a href="/?add_author_filter={{ writing.author.name }}">{{ writing.author.name }}</a> writes:</h4>
   <i>{{ writing.body }}</i>
-  <script type="text/javascript" src="/wall/static/js/deleteWriting.js">
-
-  </script>
   <span class="glyphicon glyphicon-remove pull-right text-danger delete_writing_button" aria-hidden="true">
     <input type="hidden" value="{{ writing.key.urlsafe() }}">
   </span>
   <h5 class="text-muted">{{ writing.date.strftime("%H:%M   %b %d %Y") }}</h5>
 
 {% endfor %}
+
+<script type="text/javascript" src="/wall/static/js/deleteWriting.js"></script>
 
 
 {% include "page_navigation.html" %}

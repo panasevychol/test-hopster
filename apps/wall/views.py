@@ -83,7 +83,6 @@ class MainHandler(webapp2.RequestHandler):
             return
 
         writing_body, author_name = self.request.get('writing_body'), self.request.get('author_name')
-        print writing_body, author_name
         if writing_body and author_name:
             new_writing = Writing(body=writing_body,
                                   author=Author(name=author_name))
