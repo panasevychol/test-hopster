@@ -3,8 +3,6 @@ import endpoints
 from protorpc import message_types, remote, messages
 from google.appengine.ext import ndb
 
-from auth_config import (ALLOWED_CLIENT_IDS, ANDROID_AUDIENCE, ANDROID_CLIENT_ID,
-                         IOS_CLIENT_ID, WEB_CLIENT_ID)
 from messages import (WritingMessage, WritingCollection, UserLoginMessage,
                       SuccessMessage)
 from models import Writing, Author, User
@@ -59,7 +57,7 @@ class WritingApi(remote.Service):
         new_writing = Writing(body=request.writing_body,
                               author=Author(name=request.author_name))
         new_writing.put()
-        return SuccessMessage()
+        return SuccessMessage(success=True)
 
 
     DELETE_RESOURCE = endpoints.ResourceContainer(
