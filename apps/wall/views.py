@@ -3,13 +3,15 @@ import os
 import webapp2
 import jinja2
 
-from google.appengine.api import users
+from google.appengine.api import mail
 from google.appengine.ext import ndb
 from webapp2_extras import sessions
 
-from models import Writing, Author
+from config import SECRET_KEY
+
 from constants import WRITINGS_PER_PAGE
-from utils import get_page_quantity
+from utils import get_page_quantity, request_api
+
 
 JINJA_ENVIRONMENT = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.join(
@@ -18,7 +20,9 @@ JINJA_ENVIRONMENT = jinja2.Environment(
     autoescape=True)
 
 
-class MainHandler(webapp2.RequestHandler):
+class WallRequestHandler(webapp2.RequestHandler):
+
+    JWT_KEY = 'jwt'
 
     def dispatch(self):
         # Get a session store for this request.
@@ -36,10 +40,44 @@ class MainHandler(webapp2.RequestHandler):
         # Returns a session using the default cookie key.
         return self.session_store.get_session()
 
+    def init_login(self, error=None):
+        template_values = {}
+        if error:
+            template_values['error'] = error
+        self.response.write(JINJA_ENVIRONMENT.get_template('login.html').render(
+            template_values))
+
+    def current_user_nickname(self):
+        return self.session.get('user', {}).get('nickname')
+
+    def authenticate(self):
+        # return (self.session.get('user', {}).get(self.JWT_KEY)
+        #         == self.request.headers.get(self.JWT_KEY))
+        return bool(self.current_user_nickname())
+
+
+class MainHandler(WallRequestHandler):
+
+    def request_wall_api(self, body, method_name):
+        return request_api(api_name='wall', method_name=method_name,
+                           root_path=self.request.host_url, body=body)
+
+    def list_writings(self, page_number, author_name=None):
+        body = {'author_name': author_name,
+                'limit': WRITINGS_PER_PAGE,
+                'offset': int(page_number)*WRITINGS_PER_PAGE-WRITINGS_PER_PAGE
+                }
+        return self.request_wall_api(body, 'list')
+
+    def create_writing(self, writing_body, author_name):
+        body = {'author_name': author_name,
+                'writing_body': writing_body
+                }
+        return self.request_wall_api(body, 'create')
+
     def get(self):
-        user = users.get_current_user()
-        if not user:
-            self.redirect(users.create_login_url())
+        if not self.authenticate():
+            self.init_login()
             return
 
         add_author_filter, remove_author_filter = (self.request.get('add_author_filter'),
@@ -50,26 +88,19 @@ class MainHandler(webapp2.RequestHandler):
             self.session['filter_author_name'] = None
 
         filter_author_name = self.session.get('filter_author_name')
-        if filter_author_name:
-            writing_query = Writing.query(Writing.author.name==filter_author_name)
-        else:
-            writing_query = Writing.query()
 
         page_number = self.request.get('page_number', 1)
-        writings = writing_query.order(-Writing.date).fetch(
-            limit=WRITINGS_PER_PAGE,
-            offset=int(page_number)*WRITINGS_PER_PAGE-WRITINGS_PER_PAGE)
 
-        page_quantity = writing_query.count() / WRITINGS_PER_PAGE
-        if writing_query.count() % WRITINGS_PER_PAGE:
-            page_quantity += 1
+        api_response = self.list_writings(page_number, filter_author_name)
+        writings, writings_count = (api_response.get('items', {}),
+                                    int(api_response['writings_count']))
 
         template_values = {
             'writings': writings,
-            'page_quantity': get_page_quantity(writing_query.count()),
+            'page_quantity': get_page_quantity(writings_count),
             'current_page': page_number,
-            'logout_url': users.create_logout_url('/'),
-            'nickname': user.nickname()
+            'logout_url': '/logout',
+            'nickname': self.current_user_nickname()
         }
         if filter_author_name:
             template_values['filter_author_name'] = filter_author_name
@@ -77,23 +108,77 @@ class MainHandler(webapp2.RequestHandler):
         self.response.write(template.render(template_values))
 
     def post(self):
-        user = users.get_current_user()
-        if not user:
-            self.redirect(users.create_login_url())
+        if not self.authenticate():
+            self.init_login()
             return
 
-        writing_body, author_name = self.request.get('writing_body'), self.request.get('author_name')
-        if writing_body and author_name:
-            new_writing = Writing(body=writing_body,
-                                  author=Author(name=author_name))
-            new_writing.put()
-
+        self.create_writing(self.request.get('writing_body'),
+                            self.current_user_nickname())
         self.redirect('/')
 
     def delete(self):
-        user = users.get_current_user()
-        if not user:
-            self.redirect(users.create_login_url())
+        if not self.authenticate():
+            self.init_login()
             return
 
-        ndb.Key(urlsafe=self.request.get('writing_key')).delete()
+        self.request_wall_api(body={
+            'writing_key': self.request.get('writing_key')
+        }, method_name='delete')
+        self.redirect('/')
+
+
+class LoginHandler(WallRequestHandler):
+
+    def request_users_api(self, body):
+        return request_api(api_name='users', method_name='login',
+                           root_path=self.request.host_url, body=body)
+
+    def login(self, nickname):
+        self.session['user'] = {
+            'nickname': nickname
+            # self.JWT_KEY: jwt.encode({'email': user.email}, SECRET_KEY, algorithm='HS256')
+        }
+        # self.response.headers.add_header('jwt', self.session.get('user', {}).get(self.JWT_KEY))
+        self.redirect('/')
+
+    def logout(self):
+        self.session.pop('user')
+        self.redirect('/')
+
+    def post(self):
+        email, password = self.request.get('email'), self.request.get('password')
+        response = self.request_users_api({
+            'email': email,
+            'password': password
+        })
+        error, nickname = response.get('error'), response.get('nickname')
+        if error:
+            self.init_login(error=error)
+        else:
+            self.login(nickname)
+        # self.session['user'] = {
+        #     'email': user_email
+        #     # self.JWT_KEY: jwt.encode({'email': user.email}, SECRET_KEY, algorithm='HS256')
+        # }
+        # user = User.query(User.email==email).get()
+        # if not user:
+        #     user = User(email=email, password=password)
+        #     user.put()
+        # else:
+        #     if not user.password == password:
+        #         self.init_login(error='Wrong password')
+        #         return
+        # self.login(user)
+
+
+class LogoutHandler(WallRequestHandler):
+
+    def get(self):
+        self.session.pop('user')
+        self.redirect('/')
+
+class RequestAPIHandler(WallRequestHandler):
+
+    def get(self):
+        resp = request_api(self.request.host_url)
+        self.response.write(resp)

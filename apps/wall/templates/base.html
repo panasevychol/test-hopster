@@ -14,20 +14,22 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
      integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
-     <script type="text/javascript" src="/wall/static/js/main.js"></script>
-
     <title>{% block title %}{% endblock %}Writings on the Wall</title>
     {% endblock %}
   </head>
   <body class="container main_body">
       <a class="navbar-brand" href="/">Writings on the Wall</a>
+      <div class="col-sm-10">
 
-    <div class="col-sm-10">
-      <p>Welcome, {{ nickname }}!</p>
-      <a class="pull-right" href="{{ logout_url }}">Logout</a>
+        {% if nickname %}
+          <p>Welcome, {{ nickname }}!</p>
+          <a class="pull-right" href="{{ logout_url }}">Logout</a>
+        {% endif %}
 
-      {% block content %}{% endblock %}
-    </div>
+        {% block content %}{% endblock %}
+      </div>
 
   </body>
+
+  <!-- <script type="text/javascript" src="/wall/static/js/main.js"></script> -->
 </html>

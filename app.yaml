@@ -1,8 +1,14 @@
 runtime: python27
 api_version: 1
-threadsafe: yes
+threadsafe: true
 
 handlers:
+# The endpoints handler must be mapped to /_ah/spi.
+# Apps send requests to /_ah/api, but the endpoints service handles mapping
+# those requests to /_ah/spi.
+- url: /_ah/spi/.*
+  script: main_api.api
+
 - url: /favicon\.ico
   static_files: favicon.ico
   upload: favicon\.ico
@@ -18,3 +24,8 @@ libraries:
   version: latest
 - name: jinja2
   version: latest
+
+- name: pycrypto
+  version: 2.6
+- name: endpoints
+  version: 1.0

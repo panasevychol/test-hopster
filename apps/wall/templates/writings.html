@@ -16,12 +16,17 @@
 
 {% for writing in writings %}
   <hr>
-  <h4 class="list-inline"><a href="/?add_author_filter={{ writing.author.name }}">{{ writing.author.name }}</a> writes:</h4>
+  <h4 class="list-inline"><a href="/?add_author_filter={{ writing.author_name }}">
+    {{ writing.author_name }}</a> writes:</h4>
+
   <i>{{ writing.body }}</i>
-  <span class="glyphicon glyphicon-remove pull-right text-danger delete_writing_button" aria-hidden="true">
-    <input type="hidden" value="{{ writing.key.urlsafe() }}">
-  </span>
-  <h5 class="text-muted">{{ writing.date.strftime("%H:%M   %b %d %Y") }}</h5>
+
+  {% if writing.author_name == nickname  and writing.key %}
+    <span class="glyphicon glyphicon-remove pull-right text-danger delete_writing_button"
+     aria-hidden="true" data-value="{{ writing.key }}" title="Delete your writing"></span>
+  {% endif %}
+
+  <h5 class="text-muted">{{ writing.date }}</h5>
 
 {% endfor %}
 

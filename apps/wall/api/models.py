@@ -20,3 +20,6 @@ class Writing(ndb.Model):
     author = ndb.StructuredProperty(Author)
     body = ndb.StringProperty(indexed=False, required=True)
     date = ndb.DateTimeProperty(auto_now_add=True)
+
+    # def short_date(self):
+    #     return self.date.strftime("%H:%M   %b %d %Y")
