@@ -6,6 +6,6 @@ https://hopster-test-wall.appspot.com
 
 
 It's easy to run app locally. Just do the following:
-> install Google Cloud API and configure it
-> execute `pip install -r requirements.txt -t lib\` in your application folder to install required libs
-> execute `dev_appserver.py .` also in application folder to launch it
+* install Google Cloud API and configure it
+* execute `pip install -r requirements.txt -t lib\` in your application folder to install required libs
+* execute `dev_appserver.py .` also in application folder to launch it
