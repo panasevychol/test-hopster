@@ -50,15 +50,23 @@ class WallRequestHandler(webapp2.RequestHandler):
     def current_user_nickname(self):
         return self.session.get('user', {}).get('nickname')
 
-    def authenticate(self):
-        # return (self.session.get('user', {}).get(self.JWT_KEY)
-        #         == self.request.headers.get(self.JWT_KEY))
-        return bool(self.current_user_nickname())
+    @property
+    def auth_data(self):
+        user = self.session.get('user', {})
+        return str({
+            'token': user.get('token'),
+            'email': user.get('email')
+        })
+
+    @property
+    def is_authorized(self):
+        return bool(self.session.get('user'))
 
 
 class MainHandler(WallRequestHandler):
 
     def request_wall_api(self, body, method_name):
+        body['auth_data'] = self.auth_data
         return request_api(api_name='wall', method_name=method_name,
                            root_path=self.request.host_url, body=body)
 
@@ -76,7 +84,7 @@ class MainHandler(WallRequestHandler):
         return self.request_wall_api(body, 'create')
 
     def get(self):
-        if not self.authenticate():
+        if not self.is_authorized:
             self.init_login()
             return
 
@@ -108,7 +116,7 @@ class MainHandler(WallRequestHandler):
         self.response.write(template.render(template_values))
 
     def post(self):
-        if not self.authenticate():
+        if not self.is_authorized:
             self.init_login()
             return
 
@@ -117,14 +125,15 @@ class MainHandler(WallRequestHandler):
         self.redirect('/')
 
     def delete(self):
-        if not self.authenticate():
+        if not self.is_authorized:
             self.init_login()
             return
 
-        self.request_wall_api(body={
+        success = self.request_wall_api(body={
             'writing_key': self.request.get('writing_key')
-        }, method_name='delete')
-        self.redirect('/')
+        }, method_name='delete')['success']
+        if success:
+            self.redirect('/')
 
 
 class LoginHandler(WallRequestHandler):
@@ -133,10 +142,11 @@ class LoginHandler(WallRequestHandler):
         return request_api(api_name='users', method_name='login',
                            root_path=self.request.host_url, body=body)
 
-    def login(self, nickname):
+    def login(self, email, nickname, token):
         self.session['user'] = {
-            'nickname': nickname
-            # self.JWT_KEY: jwt.encode({'email': user.email}, SECRET_KEY, algorithm='HS256')
+            'nickname': nickname,
+            'email': email,
+            'token': token
         }
         # self.response.headers.add_header('jwt', self.session.get('user', {}).get(self.JWT_KEY))
         self.redirect('/')
@@ -151,24 +161,13 @@ class LoginHandler(WallRequestHandler):
             'email': email,
             'password': password
         })
-        error, nickname = response.get('error'), response.get('nickname')
+        error, nickname, token = (response.get('error'),
+                                  response.get('nickname'),
+                                  response.get('token'))
         if error:
             self.init_login(error=error)
         else:
-            self.login(nickname)
-        # self.session['user'] = {
-        #     'email': user_email
-        #     # self.JWT_KEY: jwt.encode({'email': user.email}, SECRET_KEY, algorithm='HS256')
-        # }
-        # user = User.query(User.email==email).get()
-        # if not user:
-        #     user = User(email=email, password=password)
-        #     user.put()
-        # else:
-        #     if not user.password == password:
-        #         self.init_login(error='Wrong password')
-        #         return
-        # self.login(user)
+            self.login(email, nickname, token)
 
 
 class LogoutHandler(WallRequestHandler):

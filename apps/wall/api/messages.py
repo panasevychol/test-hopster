@@ -18,3 +18,5 @@ class WritingCollection(messages.Message):
 class UserLoginMessage(messages.Message):
     error = messages.StringField(1)
     nickname = messages.StringField(2)
+    token = messages.StringField(3)
+    email = messages.StringField(4)

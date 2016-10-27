@@ -1,5 +1,3 @@
-import pprint
-
 from googleapiclient.discovery import build
 
 # from libs import jwt
@@ -36,7 +34,3 @@ def request_api(api_name, root_path, method_name, body=None):
         # if method_name == 'login':
         response = service.users().login(body=body).execute()
     return response
-
-    # Fetch a single greeting and print it out.
-    # response = service.greetings().get(id='9001').execute()
-    # pprint.pprint(response)

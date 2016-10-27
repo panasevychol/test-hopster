@@ -1,5 +1,4 @@
 import endpoints
-# import jwt
 
 from protorpc import message_types, remote, messages
 from google.appengine.ext import ndb
@@ -9,11 +8,10 @@ from auth_config import (ALLOWED_CLIENT_IDS, ANDROID_AUDIENCE, ANDROID_CLIENT_ID
 from messages import (WritingMessage, WritingCollection, UserLoginMessage,
                       SuccessMessage)
 from models import Writing, Author, User
+from utils import get_token, authenticate
 
 
-@endpoints.api(name='users', version='v1',
-               allowed_client_ids=ALLOWED_CLIENT_IDS,
-               audiences=[ANDROID_AUDIENCE])
+@endpoints.api(name='users', version='v1')
 class UsersApi(remote.Service):
 
     LOGIN_RESOURCE = endpoints.ResourceContainer(
@@ -35,7 +33,9 @@ class UsersApi(remote.Service):
         else:
             if not user.password == request.password:
                 return UserLoginMessage(error='Wrong password')
-        return UserLoginMessage(nickname=user.nickname())
+        return UserLoginMessage(email=user.email,
+                                nickname = user.nickname(),
+                                token=get_token(user.email))
 
 
 @endpoints.api(name='wall', version='v1')
@@ -44,8 +44,9 @@ class WritingApi(remote.Service):
 
     CREATE_RESOURCE = endpoints.ResourceContainer(
         SuccessMessage,
-        author_name=messages.StringField(1),
-        writing_body=messages.StringField(2))
+        auth_data=messages.StringField(1),
+        author_name=messages.StringField(2),
+        writing_body=messages.StringField(3))
 
     @endpoints.method(
         CREATE_RESOURCE,
@@ -54,14 +55,17 @@ class WritingApi(remote.Service):
         http_method='post',
         name='writings.create')
     def create(self, request):
+        authenticate(request)
         new_writing = Writing(body=request.writing_body,
                               author=Author(name=request.author_name))
         new_writing.put()
         return SuccessMessage()
 
+
     DELETE_RESOURCE = endpoints.ResourceContainer(
         SuccessMessage,
-        writing_key=messages.StringField(1))
+        auth_data=messages.StringField(1),
+        writing_key=messages.StringField(2))
 
     @endpoints.method(
         DELETE_RESOURCE,
@@ -70,15 +74,18 @@ class WritingApi(remote.Service):
         http_method='post',
         name='writings.delete')
     def delete(self, request):
+        authenticate(request)
         key = ndb.Key(urlsafe=request.writing_key)
         key.delete()
         return SuccessMessage(success=True)
 
+
     LIST_RESOURCE = endpoints.ResourceContainer(
         WritingCollection,
-        author_name=messages.StringField(1),
-        limit=messages.IntegerField(2),
-        offset=messages.IntegerField(3))
+        auth_data=messages.StringField(1),
+        author_name=messages.StringField(2),
+        limit=messages.IntegerField(3),
+        offset=messages.IntegerField(4))
 
     @endpoints.method(
         LIST_RESOURCE,
@@ -87,9 +94,11 @@ class WritingApi(remote.Service):
         http_method='post',
         name='writings.list')
     def list_writings(self, request):
+        authenticate(request)
         limit, offset = request.limit, request.offset
         if request.author_name:
-            writing_query = Writing.query(Writing.author.name==request.author_name)
+            writing_query = Writing.query(Writing.author.name
+                                          ==str(request.author_name))
         else:
             writing_query = Writing.query()
 

@@ -1,25 +1,13 @@
-// if (localStorage.getItem('jwt')) {
-//   $.ajaxSetup({
-//       headers: { 'jwt': localStorage.getItem('jwt') }
-//   });
-//   $.ajax({
-//     url: '/',
-//     success: rewriteDocument(response)
-//   });
-//
-//   $(document).ready(initAjaxRequests());
-//
-// }
 if (localStorage.getItem('jwt')) {
   $.ajaxSetup({
       headers: { 'jwt': localStorage.getItem('jwt') }
   });
-  $.ajax({
-    url: '/',
-    success: function(data) {
-      rewriteDocument(data);
-    }
-  });
+  // $.ajax({
+  //   url: '/',
+  //   success: rewriteDocument(response)
+  // });
+
+  $(document).ready(initAjaxRequests());
 
 }
 
