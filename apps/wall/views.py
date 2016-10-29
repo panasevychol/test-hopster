@@ -21,6 +21,8 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 
 class WallRequestHandler(webapp2.RequestHandler):
 
+    SESSION_EXPIRED_ERROR = 'Session expired. Please re-login.'
+
     def dispatch(self):
         # Get a session store for this request.
         self.session_store = sessions.get_store(request=self.request)
@@ -65,8 +67,13 @@ class MainHandler(WallRequestHandler):
 
     def request_wall_api(self, body, method_name):
         body['auth_data'] = self.auth_data
-        return request_api(api_name='wall', method_name=method_name,
+        try:
+            return request_api(api_name='wall', method_name=method_name,
                            root_path=self.request.host_url, body=body)
+        except Exception as e:
+            if not 'Invalid token' in str(e):
+                raise e
+
 
     def get(self):
         if not self.is_authorized:
@@ -90,6 +97,10 @@ class MainHandler(WallRequestHandler):
             'offset': int(page_number)*WRITINGS_PER_PAGE-WRITINGS_PER_PAGE
         }, method_name='list')
 
+        if not api_response:
+            self.init_login(error=self.SESSION_EXPIRED_ERROR)
+            return
+
         writings, writings_count = (api_response.get('items', {}),
                                     int(api_response['writings_count']))
         template_values = {
@@ -106,23 +117,33 @@ class MainHandler(WallRequestHandler):
 
     def post(self):
         if not self.is_authorized:
-            self.init_login()
+            self.init_login(error=self.SESSION_EXPIRED_ERROR)
             return
 
-        self.request_wall_api(body={
+        api_response = self.request_wall_api(body={
             'author_name': self.current_user_nickname,
             'writing_body': self.request.get('writing_body')
         }, method_name='create')
+
+        if not api_response:
+            self.init_login(error=self.SESSION_EXPIRED_ERROR)
+            return
+
         self.redirect('/')
 
     def delete(self):
         if not self.is_authorized:
-            self.init_login()
+            self.init_login(error=self.SESSION_EXPIRED_ERROR)
             return
 
-        self.request_wall_api(body={
+        api_response = self.request_wall_api(body={
             'writing_key': self.request.get('writing_key')
         }, method_name='delete')
+
+        if not api_response:
+            self.init_login(error=self.SESSION_EXPIRED_ERROR)
+            return
+
         self.redirect('/')
 
 
