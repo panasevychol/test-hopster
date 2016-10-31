@@ -117,7 +117,7 @@ class MainHandler(WallRequestHandler):
 
     def post(self):
         if not self.is_authorized:
-            self.init_login(error=self.SESSION_EXPIRED_ERROR)
+            self.init_login()
             return
 
         api_response = self.request_wall_api(body={
@@ -133,7 +133,7 @@ class MainHandler(WallRequestHandler):
 
     def delete(self):
         if not self.is_authorized:
-            self.init_login(error=self.SESSION_EXPIRED_ERROR)
+            self.init_login()
             return
 
         api_response = self.request_wall_api(body={
